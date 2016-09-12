@@ -1,0 +1,75 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the existing HDInsight cluster"
+            }
+        },
+        "galleryPackageIdentity": {
+            "type": "string",
+            "metadata": {
+                "description" : "The StreamSets Data Collector is a any-to-any data movement tool with a simple drag and drop UI. It will let you create and execute data flow pipelines to ingest data easily into Microsoft Azure."
+            },
+            "defaultValue": "StreamSets Data Collector"
+        },
+        "edgeNodeSize": {
+            "type": "string",
+            "metadata": {
+                "description": "Size of the edge node that hosts the application"
+            },
+            "defaultValue": "Standard_D3",
+            "allowedValues": [
+                "Standard_A1",
+                "Standard_A2",
+                "Standard_A3",
+                "Standard_A4",
+                "Standard_D1",
+                "Standard_D2",
+                "Standard_D3",
+                "Standard_D4"
+            ]
+        }
+    },
+    "variables": {
+        "clusterApiVersion": "2015-03-01-preview",
+        "applicationName": "sdc"
+    },
+    "resources": [{
+        "name": "[concat(parameters('clusterName'),'/', variables('applicationName'))]",
+        "type": "Microsoft.HDInsight/clusters/applications",
+        "apiVersion": "[variables('clusterApiVersion')]",
+        "properties": {
+            "marketPlaceIdentifier": "[parameters('galleryPackageIdentity')]",
+            "computeProfile": {
+                "roles": [{
+                    "name": "edgenode",
+                    "targetInstanceCount": 1,
+                    "hardwareProfile": {
+                        "vmSize": "[parameters('edgeNodeSize')]"
+                    }
+                }]
+            },
+            "installScriptActions": [{
+                "name": "StreamSetsDataCollector-Install",
+                "uri": "https://github.com/streamsets/azure/Iaas-Applications/scripts/sdc_install_v01.sh",
+                "roles": ["edgenode"]
+            }],
+            "uninstallScriptActions": [],
+            "httpsEndpoints": [{
+                "subDomainSuffix": "sdc",
+                "destinationPort": 18630,
+                "accessModes": ["webpage"]
+            }],
+            "applicationType": "CustomApplication"
+        }
+    }],
+    "outputs": {
+        "application": {
+            "type": "object",
+            "value": "[reference(resourceId('Microsoft.HDInsight/clusters/applications/',parameters('clusterName'), variables('applicationName')))]"
+        }
+    }
+}
